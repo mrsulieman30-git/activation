@@ -51,6 +51,37 @@ class RegistrationRequestResource extends Resource
             ]);
     }
 
+    public static function infolist(Schema $schema): Schema
+    {
+        return $schema
+            ->components([
+                \Filament\Infolists\Components\Section::make('Request Details')
+                    ->schema([
+                        \Filament\Infolists\Components\TextEntry::make('clinic_name'),
+                        \Filament\Infolists\Components\TextEntry::make('contact_name'),
+                        \Filament\Infolists\Components\TextEntry::make('email'),
+                        \Filament\Infolists\Components\TextEntry::make('phone'),
+                        \Filament\Infolists\Components\TextEntry::make('status')
+                            ->badge()
+                            ->color(fn (string $state): string => match ($state) {
+                                'pending' => 'warning',
+                                'approved' => 'success',
+                                'rejected' => 'danger',
+                                default => 'gray',
+                            }),
+                    ])->columns(2),
+                \Filament\Infolists\Components\Section::make('Device & Serial Key')
+                    ->schema([
+                        \Filament\Infolists\Components\TextEntry::make('device_fingerprint'),
+                        \Filament\Infolists\Components\TextEntry::make('serialKey.key_value')
+                            ->label('Assigned Serial Key')
+                            ->copyable()
+                            ->copyMessage('Serial key copied')
+                            ->copyMessageDuration(1500),
+                    ])->columns(2),
+            ]);
+    }
+
     public static function table(Table $table): Table
     {
         return $table
@@ -84,6 +115,7 @@ class RegistrationRequestResource extends Resource
                 //
             ])
             ->actions([
+                \Filament\Actions\ViewAction::make(),
                 \Filament\Actions\Action::make('approve')
                     ->label('Approve & Generate Key')
                     ->icon('heroicon-o-check-circle')
@@ -93,12 +125,14 @@ class RegistrationRequestResource extends Resource
                     ->action(function (RegistrationRequest $record) {
                         // 1. Create Customer Profile
                         $customer = Customer::firstOrCreate(
-                            ['email' => $record->email],
+                            ['contact_email' => $record->email],
                             [
                                 'name' => $record->clinic_name,
                                 'contact_person' => $record->contact_name,
-                                'phone' => $record->phone,
-                                'address' => 'Generated from Registration',
+                                'contact_phone' => $record->phone,
+                                'code' => 'HOSP-' . \Illuminate\Support\Str::upper(\Illuminate\Support\Str::random(6)),
+                                'max_devices' => 10,
+                                'license_type' => 'hospital',
                             ]
                         );
 
@@ -130,6 +164,10 @@ class RegistrationRequestResource extends Resource
                             ->title('Registration Approved!')
                             ->body("Serial Key {$serialKeyStr} generated for {$record->clinic_name}.")
                             ->send();
+
+                        // Redirect to the view page of this request
+                        $record->refresh();
+                        return redirect(RegistrationRequestResource::getUrl('view', ['record' => $record]));
                     }),
             ])
             ->bulkActions([
@@ -151,6 +189,7 @@ class RegistrationRequestResource extends Resource
         return [
             'index' => Pages\ListRegistrationRequests::route('/'),
             'create' => Pages\CreateRegistrationRequest::route('/create'),
+            'view' => Pages\ViewRegistrationRequest::route('/{record}'),
             'edit' => Pages\EditRegistrationRequest::route('/{record}/edit'),
         ];
     }
