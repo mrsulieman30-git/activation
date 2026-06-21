@@ -32,7 +32,7 @@ class AdminPanelProvider extends PanelProvider
                 'primary' => '#4a90e2', // Dock Light Blue
                 'gray' => Color::Slate,
             ])
-            ->font('Inter')
+            ->font('Tajawal')
             ->darkMode(false)
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
