@@ -84,49 +84,57 @@ class RegistrationRequestResource extends Resource
                 //
             ])
             ->actions([
-                Tables\Actions\Action::make('approve')
+                \Filament\Actions\Action::make('approve')
                     ->label('Approve & Generate Key')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->requiresConfirmation()
-                    ->visible(fn (RegistrationRequest $record) => $record->status === 'pending')
+                    ->hidden(fn (RegistrationRequest $record) => $record->status !== 'pending')
                     ->action(function (RegistrationRequest $record) {
-                        // 1. Create Customer
-                        $customerCode = strtoupper(substr(preg_replace('/[^a-zA-Z0-9]/', '', $record->clinic_name), 0, 5));
+                        // 1. Create Customer Profile
                         $customer = Customer::firstOrCreate(
-                            ['code' => $customerCode],
+                            ['email' => $record->email],
                             [
                                 'name' => $record->clinic_name,
-                                'hms_server_url' => 'https://hms.seeha.tech',
-                                'hms_api_url' => 'https://hms.seeha.tech/api',
-                                'max_devices' => 5,
-                                'license_type' => 'clinic',
-                                'status' => 'active'
+                                'contact_person' => $record->contact_name,
+                                'phone' => $record->phone,
+                                'address' => 'Generated from Registration',
                             ]
                         );
 
-                        // 2. Generate Serial Key
-                        $keyValue = 'ST-' . $customerCode . '-' . strtoupper(Str::random(4)) . '-' . strtoupper(Str::random(4));
+                        // 2. Generate a Serial Key for this customer
+                        $serialKeyStr = \Illuminate\Support\Str::upper(\Illuminate\Support\Str::random(4)) . '-' . 
+                                        \Illuminate\Support\Str::upper(\Illuminate\Support\Str::random(4)) . '-' . 
+                                        \Illuminate\Support\Str::upper(\Illuminate\Support\Str::random(4)) . '-' . 
+                                        \Illuminate\Support\Str::upper(\Illuminate\Support\Str::random(4));
+
                         $serialKey = SerialKey::create([
                             'customer_id' => $customer->id,
-                            'key_value' => $keyValue,
-                            'status' => 'active',
-                            'max_activations' => $customer->max_devices,
+                            'key_value' => $serialKeyStr,
+                            'max_activations' => 1,
+                            'expires_at' => now()->addYear(),
+                            'is_active' => true,
                         ]);
 
-                        // 3. Mark request as approved
+                        // 3. Update the Registration Request
                         $record->update([
                             'status' => 'approved',
                             'serial_key_id' => $serialKey->id,
                             'reviewed_by' => auth()->id(),
                             'reviewed_at' => now(),
                         ]);
+                        
+                        // Let Filament know it succeeded so it can show a toast notification
+                        \Filament\Notifications\Notification::make()
+                            ->success()
+                            ->title('Registration Approved!')
+                            ->body("Serial Key {$serialKeyStr} generated for {$record->clinic_name}.")
+                            ->send();
                     }),
-                Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                \Filament\Actions\BulkActionGroup::make([
+                    \Filament\Actions\DeleteBulkAction::make(),
                 ]),
             ]);
     }
