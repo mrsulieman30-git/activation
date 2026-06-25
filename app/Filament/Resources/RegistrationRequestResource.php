@@ -24,9 +24,9 @@ class RegistrationRequestResource extends Resource
     {
         return $schema
             ->components([
-                Forms\Components\Select::make('customer_id')
+                Forms\Components\Select::make('select_customer')
                     ->label('Select Existing Customer (Autofill)')
-                    ->options(fn () => Customer::pluck('name', 'id'))
+                    ->options(fn () => Customer::pluck('name', 'id')->toArray())
                     ->placeholder('Search and select an existing customer...')
                     ->searchable()
                     ->dehydrated(false)
