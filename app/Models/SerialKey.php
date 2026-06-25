@@ -15,6 +15,17 @@ class SerialKey extends Model
         'expires_at' => 'datetime',
     ];
 
+    protected static function booted()
+    {
+        static::creating(function ($serialKey) {
+            if (empty($serialKey->key_value)) {
+                $serialKey->key_value = collect(range(1, 4))
+                    ->map(fn() => strtoupper(\Illuminate\Support\Str::random(4)))
+                    ->join('-');
+            }
+        });
+    }
+
     public function customer()
     {
         return $this->belongsTo(Customer::class);

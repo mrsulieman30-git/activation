@@ -21,10 +21,28 @@ class SerialKeysRelationManager extends RelationManager
         return $schema
             ->components([
                 Forms\Components\TextInput::make('key_value')
+                    ->label('Serial Key / Activation Code')
+                    ->placeholder('Leave empty to auto-generate')
+                    ->maxLength(255),
+                Forms\Components\TextInput::make('hardware_fingerprint')
+                    ->label('PC Hardware Fingerprint')
                     ->required()
                     ->maxLength(255),
-                Forms\Components\Toggle::make('is_active')
-                    ->default(true),
+                Forms\Components\Select::make('status')
+                    ->options([
+                        'active' => 'Active',
+                        'suspended' => 'Suspended',
+                        'revoked' => 'Revoked',
+                        'expired' => 'Expired'
+                    ])
+                    ->default('active')
+                    ->required(),
+                Forms\Components\TextInput::make('max_activations')
+                    ->numeric()
+                    ->default(1)
+                    ->required(),
+                Forms\Components\DateTimePicker::make('expires_at')
+                    ->label('Expires At'),
             ]);
     }
 
@@ -34,27 +52,38 @@ class SerialKeysRelationManager extends RelationManager
             ->columns([
                 Tables\Columns\TextColumn::make('key_value')
                     ->label('Serial Key')
-                    ->copyable(),
+                    ->copyable()
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('hardware_fingerprint')
+                    ->label('Hardware Fingerprint')
+                    ->copyable()
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('status')
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'active' => 'success',
+                        'suspended' => 'warning',
+                        'revoked', 'expired' => 'danger',
+                        default => 'gray',
+                    }),
                 Tables\Columns\TextColumn::make('max_activations')
                     ->label('Max Activations'),
-                Tables\Columns\IconColumn::make('is_active')
-                    ->boolean(),
                 Tables\Columns\TextColumn::make('expires_at')
-                    ->date(),
+                    ->dateTime(),
             ])
             ->filters([
                 //
             ])
             ->headerActions([
-                // \Filament\Actions\CreateAction::make(),
+                Tables\Actions\CreateAction::make(),
             ])
             ->actions([
-                \Filament\Actions\EditAction::make(),
-                \Filament\Actions\DeleteAction::make(),
+                Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
-                \Filament\Actions\BulkActionGroup::make([
-                    \Filament\Actions\DeleteBulkAction::make(),
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ]);
     }
