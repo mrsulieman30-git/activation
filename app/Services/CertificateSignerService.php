@@ -36,7 +36,7 @@ class CertificateSignerService
 
         try {
             $privateKey = sodium_hex2bin($this->privateKeyHex);
-            $payloadString = json_encode($payload, JSON_THROW_ON_ERROR);
+            $payloadString = json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
             
             $signature = sodium_crypto_sign_detached($payloadString, $privateKey);
             
