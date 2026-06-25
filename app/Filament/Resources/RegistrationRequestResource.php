@@ -24,30 +24,61 @@ class RegistrationRequestResource extends Resource
     {
         return $schema
             ->components([
+                Forms\Components\Select::make('customer_id')
+                    ->label('Select Existing Customer (Autofill)')
+                    ->options(fn () => Customer::pluck('name', 'id'))
+                    ->placeholder('Search and select an existing customer...')
+                    ->searchable()
+                    ->dehydrated(false)
+                    ->live()
+                    ->afterStateUpdated(function ($state, callable $set) {
+                        if ($state) {
+                            $customer = Customer::find($state);
+                            if ($customer) {
+                                $set('clinic_name', $customer->name);
+                                $set('contact_name', $customer->contact_name);
+                                $set('email', $customer->contact_email);
+                                $set('phone', $customer->contact_phone);
+                            }
+                        }
+                    })
+                    ->helperText('Select an existing customer to automatically fill their registration details.'),
+
                 Forms\Components\TextInput::make('clinic_name')
+                    ->label('Clinic / Hospital Name')
                     ->required()
                     ->maxLength(255),
+                
                 Forms\Components\TextInput::make('contact_name')
+                    ->label('Contact Name')
                     ->required()
                     ->maxLength(255),
+                
                 Forms\Components\TextInput::make('email')
+                    ->label('Email Address')
                     ->email()
                     ->required()
                     ->maxLength(255),
+                
                 Forms\Components\TextInput::make('phone')
+                    ->label('Phone Number')
                     ->tel()
                     ->required()
                     ->maxLength(255),
+                
                 Forms\Components\TextInput::make('device_fingerprint')
+                    ->label('Device Fingerprint')
                     ->required()
                     ->maxLength(255),
+                
                 Forms\Components\Select::make('status')
                     ->options([
                         'pending' => 'Pending',
                         'approved' => 'Approved',
                         'rejected' => 'Rejected',
                     ])
-                    ->required(),
+                    ->required()
+                    ->default('pending'),
             ]);
     }
 
