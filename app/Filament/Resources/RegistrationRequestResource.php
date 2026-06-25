@@ -80,6 +80,8 @@ class RegistrationRequestResource extends Resource
                         'rejected' => 'Rejected',
                     ])
                     ->default('pending')
+                    ->disabled()
+                    ->dehydrated(true)
                     ->required(),
             ]);
     }
@@ -168,7 +170,7 @@ class RegistrationRequestResource extends Resource
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->requiresConfirmation()
-                    ->hidden(fn (RegistrationRequest $record) => $record->status !== 'pending')
+                    ->hidden(fn (RegistrationRequest $record) => $record->status === 'rejected' || ($record->status === 'approved' && $record->serial_key_id !== null))
                     ->action(function (RegistrationRequest $record) {
                         // 1. Create/Find Customer Profile
                         $customer = Customer::firstOrCreate(
