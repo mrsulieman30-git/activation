@@ -132,8 +132,8 @@ class ActivationApiController extends Controller
                     'customer_id' => $customer->id,
                     'device_fingerprint' => $activationRequest->device_fingerprint,
                     'license_id' => $licenseId,
-                    'server_url' => $customer->hms_server_url,
-                    'api_url' => $customer->hms_api_url,
+                    'server_url' => $customer->hms_server_url ?? '',
+                    'api_url' => $customer->hms_api_url ?? '',
                     'certificate_data' => $signedData['payload'],
                     'digital_signature' => $signedData['signature'],
                     'issued_at' => now()

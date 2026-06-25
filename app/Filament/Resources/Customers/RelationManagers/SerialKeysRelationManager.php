@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Customers\RelationManagers;
 
+use Filament\Actions;
 use Filament\Forms;
 use Filament\Schemas\Schema;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -28,21 +29,21 @@ class SerialKeysRelationManager extends RelationManager
                     ->label('PC Hardware Fingerprint')
                     ->required()
                     ->maxLength(255),
-                Forms\Components\Select::make('status')
-                    ->options([
-                        'active' => 'Active',
-                        'suspended' => 'Suspended',
-                        'revoked' => 'Revoked',
-                        'expired' => 'Expired'
-                    ])
-                    ->default('active')
-                    ->required(),
                 Forms\Components\TextInput::make('max_activations')
                     ->numeric()
                     ->default(1)
                     ->required(),
                 Forms\Components\DateTimePicker::make('expires_at')
-                    ->label('Expires At'),
+                    ->default(now()->addYear()),
+                Forms\Components\Select::make('status')
+                    ->options([
+                        'active' => 'Active',
+                        'suspended' => 'Suspended',
+                        'revoked' => 'Revoked',
+                        'expired' => 'Expired',
+                    ])
+                    ->default('active')
+                    ->required(),
             ]);
     }
 
@@ -75,15 +76,15 @@ class SerialKeysRelationManager extends RelationManager
                 //
             ])
             ->headerActions([
-                Tables\Actions\CreateAction::make(),
+                Actions\CreateAction::make(),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Actions\EditAction::make(),
+                Actions\DeleteAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                Actions\BulkActionGroup::make([
+                    Actions\DeleteBulkAction::make(),
                 ]),
             ]);
     }

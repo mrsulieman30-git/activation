@@ -6,9 +6,12 @@ use App\Filament\Resources\RegistrationRequestResource\Pages;
 use App\Models\Customer;
 use App\Models\RegistrationRequest;
 use App\Models\SerialKey;
+use BackedEnum;
+use Filament\Actions;
 use Filament\Forms;
 use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
+use Filament\Support\Icons\Heroicon;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Support\Str;
@@ -17,7 +20,7 @@ class RegistrationRequestResource extends Resource
 {
     protected static ?string $model = RegistrationRequest::class;
 
-    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClipboardDocumentList;
     protected static ?string $navigationLabel = 'Registrations';
 
     public static function form(Schema $schema): Schema
@@ -50,24 +53,23 @@ class RegistrationRequestResource extends Resource
                     ->maxLength(255),
                 
                 Forms\Components\TextInput::make('contact_name')
-                    ->label('Contact Name')
+                    ->label('Contact Person')
                     ->required()
                     ->maxLength(255),
                 
                 Forms\Components\TextInput::make('email')
-                    ->label('Email Address')
-                    ->email()
+                    ->label('Contact Email')
                     ->required()
+                    ->email()
                     ->maxLength(255),
                 
                 Forms\Components\TextInput::make('phone')
-                    ->label('Phone Number')
-                    ->tel()
+                    ->label('Contact Phone')
                     ->required()
                     ->maxLength(255),
                 
                 Forms\Components\TextInput::make('device_fingerprint')
-                    ->label('Device Fingerprint')
+                    ->label('Device Fingerprint (Hardware ID)')
                     ->required()
                     ->maxLength(255),
                 
@@ -77,8 +79,8 @@ class RegistrationRequestResource extends Resource
                         'approved' => 'Approved',
                         'rejected' => 'Rejected',
                     ])
-                    ->required()
-                    ->default('pending'),
+                    ->default('pending')
+                    ->required(),
             ]);
     }
 
@@ -86,7 +88,7 @@ class RegistrationRequestResource extends Resource
     {
         return $schema
             ->components([
-                \Filament\Infolists\Components\Section::make('Request Details')
+                \Filament\Schemas\Components\Section::make('Request Details')
                     ->schema([
                         \Filament\Infolists\Components\TextEntry::make('clinic_name'),
                         \Filament\Infolists\Components\TextEntry::make('contact_name'),
@@ -101,7 +103,7 @@ class RegistrationRequestResource extends Resource
                                 default => 'gray',
                             }),
                     ])->columns(2),
-                \Filament\Infolists\Components\Section::make('Device & Serial Key')
+                \Filament\Schemas\Components\Section::make('Device & Serial Key')
                     ->schema([
                         \Filament\Infolists\Components\TextEntry::make('device_fingerprint'),
                         \Filament\Infolists\Components\TextEntry::make('serialKey.key_value')
@@ -118,11 +120,20 @@ class RegistrationRequestResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('clinic_name')
-                    ->searchable(),
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('contact_name')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('email')
                     ->searchable(),
+                Tables\Columns\TextColumn::make('phone')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('device_fingerprint')
+                    ->label('Hardware ID')
+                    ->searchable()
+                    ->copyable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
@@ -132,8 +143,8 @@ class RegistrationRequestResource extends Resource
                         default => 'gray',
                     }),
                 Tables\Columns\TextColumn::make('serialKey.key_value')
-                    ->label('Serial Key')
-                    ->searchable()
+                    ->label('Generated Serial Key')
+                    ->placeholder('N/A')
                     ->copyable()
                     ->copyMessage('Serial key copied')
                     ->copyMessageDuration(1500),
@@ -143,42 +154,48 @@ class RegistrationRequestResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                Tables\Filters\SelectFilter::make('status')
+                    ->options([
+                        'pending' => 'Pending',
+                        'approved' => 'Approved',
+                        'rejected' => 'Rejected',
+                    ]),
             ])
             ->actions([
-                \Filament\Actions\ViewAction::make(),
-                \Filament\Actions\Action::make('approve')
+                Actions\ViewAction::make(),
+                Actions\Action::make('approve')
                     ->label('Approve & Generate Key')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->requiresConfirmation()
                     ->hidden(fn (RegistrationRequest $record) => $record->status !== 'pending')
                     ->action(function (RegistrationRequest $record) {
-                        // 1. Create Customer Profile
+                        // 1. Create/Find Customer Profile
                         $customer = Customer::firstOrCreate(
                             ['contact_email' => $record->email],
                             [
                                 'name' => $record->clinic_name,
-                                'contact_person' => $record->contact_name,
+                                'contact_name' => $record->contact_name,
                                 'contact_phone' => $record->phone,
-                                'code' => 'HOSP-' . \Illuminate\Support\Str::upper(\Illuminate\Support\Str::random(6)),
+                                'code' => 'CUST-' . Str::upper(Str::random(6)),
                                 'max_devices' => 10,
                                 'license_type' => 'hospital',
+                                'status' => 'active',
                             ]
                         );
 
                         // 2. Generate a Serial Key for this customer
-                        $serialKeyStr = \Illuminate\Support\Str::upper(\Illuminate\Support\Str::random(4)) . '-' . 
-                                        \Illuminate\Support\Str::upper(\Illuminate\Support\Str::random(4)) . '-' . 
-                                        \Illuminate\Support\Str::upper(\Illuminate\Support\Str::random(4)) . '-' . 
-                                        \Illuminate\Support\Str::upper(\Illuminate\Support\Str::random(4));
+                        $serialKeyStr = collect(range(1, 4))
+                            ->map(fn () => Str::upper(Str::random(4)))
+                            ->join('-');
 
                         $serialKey = SerialKey::create([
                             'customer_id' => $customer->id,
                             'key_value' => $serialKeyStr,
+                            'hardware_fingerprint' => $record->device_fingerprint,
                             'max_activations' => 1,
                             'expires_at' => now()->addYear(),
-                            'is_active' => true,
+                            'status' => 'active',
                         ]);
 
                         // 3. Update the Registration Request
@@ -200,10 +217,30 @@ class RegistrationRequestResource extends Resource
                         $record->refresh();
                         return redirect(RegistrationRequestResource::getUrl('view', ['record' => $record]));
                     }),
+
+                Actions\Action::make('reject')
+                    ->label('Reject')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->hidden(fn (RegistrationRequest $record) => $record->status !== 'pending')
+                    ->action(function (RegistrationRequest $record) {
+                        $record->update([
+                            'status' => 'rejected',
+                            'reviewed_by' => auth()->id(),
+                            'reviewed_at' => now(),
+                        ]);
+
+                        \Filament\Notifications\Notification::make()
+                            ->warning()
+                            ->title('Registration Rejected')
+                            ->body("Registration for {$record->clinic_name} has been rejected.")
+                            ->send();
+                    }),
             ])
             ->bulkActions([
-                \Filament\Actions\BulkActionGroup::make([
-                    \Filament\Actions\DeleteBulkAction::make(),
+                Actions\BulkActionGroup::make([
+                    Actions\DeleteBulkAction::make(),
                 ]),
             ]);
     }

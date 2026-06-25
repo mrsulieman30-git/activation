@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\ActivationRequests\Tables;
 
+use Filament\Actions;
 use Filament\Tables;
 use Filament\Forms;
 use Filament\Tables\Columns\TextColumn;
@@ -60,7 +61,7 @@ class ActivationRequestsTable
                     ]),
             ])
             ->actions([
-                Tables\Actions\Action::make('approve')
+                Actions\Action::make('approve')
                     ->label('Approve')
                     ->color('success')
                     ->icon('heroicon-o-check')
@@ -98,15 +99,15 @@ class ActivationRequestsTable
                             'customer_id' => $customer->id,
                             'device_fingerprint' => $record->device_fingerprint,
                             'license_id' => $licenseId,
-                            'server_url' => $customer->hms_server_url,
-                            'api_url' => $customer->hms_api_url,
+                            'server_url' => $customer->hms_server_url ?? '',
+                            'api_url' => $customer->hms_api_url ?? '',
                             'certificate_data' => $signedData['payload'],
                             'digital_signature' => $signedData['signature'],
                             'issued_at' => now()
                         ]);
                     }),
 
-                Tables\Actions\Action::make('reject')
+                Actions\Action::make('reject')
                     ->label('Reject')
                     ->color('danger')
                     ->icon('heroicon-o-x-mark')
@@ -125,14 +126,15 @@ class ActivationRequestsTable
                         ]);
                     }),
 
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Actions\ViewAction::make(),
+                Actions\EditAction::make(),
+                Actions\DeleteAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                Actions\BulkActionGroup::make([
+                    Actions\DeleteBulkAction::make(),
                 ]),
             ]);
     }
 }
+
