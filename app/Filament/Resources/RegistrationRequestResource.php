@@ -169,9 +169,22 @@ class RegistrationRequestResource extends Resource
                     ->label('Approve & Generate Key')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
+                    ->form([
+                        \Filament\Forms\Components\Select::make('duration')
+                            ->label('License Duration')
+                            ->options([
+                                '30_days' => '30 Days',
+                                '90_days' => '90 Days',
+                                '180_days' => '180 Days',
+                                '1_year' => '1 Year',
+                                'lifetime' => 'Lifetime (No Expiry)',
+                            ])
+                            ->default('1_year')
+                            ->required(),
+                    ])
                     ->requiresConfirmation()
                     ->hidden(fn (RegistrationRequest $record) => $record->status === 'rejected' || ($record->status === 'approved' && $record->serial_key_id !== null))
-                    ->action(function (RegistrationRequest $record) {
+                    ->action(function (RegistrationRequest $record, array $data) {
                         // 1. Create/Find Customer Profile
                         $customer = Customer::firstOrCreate(
                             ['contact_email' => $record->email],
@@ -183,7 +196,7 @@ class RegistrationRequestResource extends Resource
                                 'max_devices' => 10,
                                 'license_type' => 'hospital',
                                 'status' => 'active',
-                            ]
+                             ]
                         );
 
                         // 2. Generate a Serial Key for this customer
@@ -191,12 +204,20 @@ class RegistrationRequestResource extends Resource
                             ->map(fn () => Str::upper(Str::random(4)))
                             ->join('-');
 
+                        $expiresAt = match ($data['duration']) {
+                            '30_days' => now()->addDays(30),
+                            '90_days' => now()->addDays(90),
+                            '180_days' => now()->addDays(180),
+                            '1_year' => now()->addYear(),
+                            'lifetime' => null,
+                        };
+
                         $serialKey = SerialKey::create([
                             'customer_id' => $customer->id,
                             'key_value' => $serialKeyStr,
                             'hardware_fingerprint' => $record->device_fingerprint,
                             'max_activations' => 1,
-                            'expires_at' => now()->addYear(),
+                            'expires_at' => $expiresAt,
                             'status' => 'active',
                         ]);
 
