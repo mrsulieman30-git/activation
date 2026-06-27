@@ -54,8 +54,12 @@ class ActivationApiController extends Controller
                         'status' => 'approved',
                         'message' => 'Device already activated.',
                         'customer_name' => $customer->name,
-                        'server_url' => $certificate->server_url,
-                        'api_url' => $certificate->api_url,
+                        'server_url' => $certificate->server_url ?: env('DEFAULT_HMS_SERVER_URL', 'https://hms.seeha.tech'),
+                        'api_url' => $certificate->api_url ?: env('DEFAULT_HMS_API_URL', 'https://hms.seeha.tech/api'),
+                        'sync_credentials' => [
+                            'api_key' => env('DESKTOP_API_KEY', ''),
+                            'api_secret' => env('DESKTOP_API_SECRET', ''),
+                        ],
                         'certificate' => [
                             'license_id' => $certificate->license_id,
                             'customer_id' => $certificate->customer_id,
@@ -143,8 +147,12 @@ class ActivationApiController extends Controller
             return response()->json([
                 'status' => 'approved',
                 'customer_name' => $activationRequest->serialKey->customer->name,
-                'server_url' => $certificate->server_url,
-                'api_url' => $certificate->api_url,
+                'server_url' => $certificate->server_url ?: env('DEFAULT_HMS_SERVER_URL', 'https://hms.seeha.tech'),
+                'api_url' => $certificate->api_url ?: env('DEFAULT_HMS_API_URL', 'https://hms.seeha.tech/api'),
+                'sync_credentials' => [
+                    'api_key' => env('DESKTOP_API_KEY', ''),
+                    'api_secret' => env('DESKTOP_API_SECRET', ''),
+                ],
                 'certificate' => [
                     'license_id' => $certificate->license_id,
                     'customer_id' => $certificate->customer_id,

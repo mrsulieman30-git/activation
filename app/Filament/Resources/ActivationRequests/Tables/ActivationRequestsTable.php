@@ -126,6 +126,55 @@ class ActivationRequestsTable
                         ]);
                     }),
 
+                Actions\Action::make('revoke')
+                    ->label('Revoke')
+                    ->color('danger')
+                    ->icon('heroicon-o-no-symbol')
+                    ->visible(fn ($record) => $record->status === 'approved')
+                    ->requiresConfirmation()
+                    ->modalDescription('This will revoke the activation. The desktop app will be deactivated on its next heartbeat check.')
+                    ->form([
+                        Forms\Components\Textarea::make('rejection_reason')
+                            ->label('Revocation Reason')
+                            ->placeholder('e.g., License expired, contract terminated, suspicious activity'),
+                    ])
+                    ->action(function ($record, array $data) {
+                        $record->update([
+                            'status' => 'revoked',
+                            'rejection_reason' => $data['rejection_reason'] ?? 'License revoked by administrator.',
+                            'reviewed_at' => now(),
+                            'reviewed_by' => auth()->id(),
+                        ]);
+
+                        // Also revoke the certificate if it exists
+                        $certificate = \App\Models\ActivationCertificate::where('activation_request_id', $record->id)->first();
+                        if ($certificate) {
+                            $certificate->update(['revoked_at' => now()]);
+                        }
+                    }),
+
+                Actions\Action::make('reactivate')
+                    ->label('Re-activate')
+                    ->color('success')
+                    ->icon('heroicon-o-arrow-path')
+                    ->visible(fn ($record) => in_array($record->status, ['revoked', 'rejected']))
+                    ->requiresConfirmation()
+                    ->modalDescription('This will re-activate this device. The desktop app will regain access on its next heartbeat check.')
+                    ->action(function ($record) {
+                        $record->update([
+                            'status' => 'approved',
+                            'rejection_reason' => null,
+                            'reviewed_at' => now(),
+                            'reviewed_by' => auth()->id(),
+                        ]);
+
+                        // Un-revoke the certificate if it exists
+                        $certificate = \App\Models\ActivationCertificate::where('activation_request_id', $record->id)->first();
+                        if ($certificate) {
+                            $certificate->update(['revoked_at' => null]);
+                        }
+                    }),
+
                 Actions\ViewAction::make(),
                 Actions\EditAction::make(),
                 Actions\DeleteAction::make(),
