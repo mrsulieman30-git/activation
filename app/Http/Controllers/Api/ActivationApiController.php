@@ -57,8 +57,8 @@ class ActivationApiController extends Controller
                         'server_url' => $certificate->server_url ?: env('DEFAULT_HMS_SERVER_URL', 'https://hms.seeha.tech'),
                         'api_url' => $certificate->api_url ?: env('DEFAULT_HMS_API_URL', 'https://hms.seeha.tech/api'),
                         'sync_credentials' => [
-                            'api_key' => env('DESKTOP_API_KEY', ''),
-                            'api_secret' => env('DESKTOP_API_SECRET', ''),
+                            'api_key' => env('DESKTOP_API_KEY', 'hms-sync-2026-secret'),
+                            'api_secret' => env('DESKTOP_API_SECRET', 'super-secret-password-123'),
                         ],
                         'certificate' => [
                             'license_id' => $certificate->license_id,
@@ -150,8 +150,8 @@ class ActivationApiController extends Controller
                 'server_url' => $certificate->server_url ?: env('DEFAULT_HMS_SERVER_URL', 'https://hms.seeha.tech'),
                 'api_url' => $certificate->api_url ?: env('DEFAULT_HMS_API_URL', 'https://hms.seeha.tech/api'),
                 'sync_credentials' => [
-                    'api_key' => env('DESKTOP_API_KEY', ''),
-                    'api_secret' => env('DESKTOP_API_SECRET', ''),
+                    'api_key' => env('DESKTOP_API_KEY', 'hms-sync-2026-secret'),
+                    'api_secret' => env('DESKTOP_API_SECRET', 'super-secret-password-123'),
                 ],
                 'certificate' => [
                     'license_id' => $certificate->license_id,
